@@ -110,6 +110,7 @@ def main():
     collection = db.get_collection('advertisements')
     url = 'https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Ato%5D=800000&search%5Bfilter_float_price_per_m%3Ato%5D=12000&search%5Bfilter_float_m%3Afrom%5D=40&search%5Bfilter_float_m%3Ato%5D=70&search%5Bfilter_enum_floor_no%5D%5B0%5D=floor_1&search%5Bfilter_enum_floor_no%5D%5B1%5D=floor_2&search%5Bfilter_enum_floor_no%5D%5B2%5D=floor_3&search%5Bfilter_enum_floor_no%5D%5B3%5D=floor_4&search%5Bfilter_enum_floor_no%5D%5B4%5D=floor_5&search%5Bfilter_enum_floor_no%5D%5B5%5D=floor_6&search%5Bfilter_enum_floor_no%5D%5B6%5D=floor_7&search%5Bfilter_enum_floor_no%5D%5B7%5D=floor_8&search%5Bfilter_enum_floor_no%5D%5B8%5D=floor_9&search%5Bfilter_enum_floor_no%5D%5B9%5D=floor_10&search%5Bfilter_enum_floor_no%5D%5B10%5D=floor_higher_10&search%5Bfilter_enum_floor_no%5D%5B11%5D=garret&search%5Bdescription%5D=1&search%5Bprivate_business%5D=private&search%5Border%5D=created_at_first%3Adesc&locations%5B0%5D%5Bregion_id%5D=7&locations%5B0%5D%5Bsubregion_id%5D=197&locations%5B0%5D%5Bcity_id%5D=26&locations%5B0%5D%5Bdistrict_id%5D=42&locations%5B1%5D%5Bregion_id%5D=7&locations%5B1%5D%5Bsubregion_id%5D=197&locations%5B1%5D%5Bcity_id%5D=26&locations%5B1%5D%5Bdistrict_id%5D=847&locations%5B2%5D%5Bregion_id%5D=7&locations%5B2%5D%5Bsubregion_id%5D=197&locations%5B2%5D%5Bcity_id%5D=26&locations%5B2%5D%5Bdistrict_id%5D=39&locations%5B3%5D%5Bregion_id%5D=7&locations%5B3%5D%5Bsubregion_id%5D=197&locations%5B3%5D%5Bcity_id%5D=26&locations%5B3%5D%5Bdistrict_id%5D=44&locations%5B4%5D%5Bregion_id%5D=7&locations%5B4%5D%5Bsubregion_id%5D=197&locations%5B4%5D%5Bcity_id%5D=26&locations%5B4%5D%5Bdistrict_id%5D=724&locations%5B5%5D%5Bregion_id%5D=7&locations%5B5%5D%5Bsubregion_id%5D=197&locations%5B5%5D%5Bcity_id%5D=26&locations%5B5%5D%5Bdistrict_id%5D=40&locations%5B6%5D%5Bregion_id%5D=7&locations%5B6%5D%5Bsubregion_id%5D=197&locations%5B6%5D%5Bcity_id%5D=26&locations%5B6%5D%5Bdistrict_id%5D=53&locations%5B7%5D%5Bregion_id%5D=7&locations%5B7%5D%5Bcity_id%5D=26&locations%5B7%5D%5Bdistrict_id%5D=3319&locations%5B8%5D%5Bregion_id%5D=7&locations%5B8%5D%5Bcity_id%5D=26&locations%5B8%5D%5Bdistrict_id%5D=38&nrAdsPerPage=72'
 
+    print('Started scraping')
     try:
         upserted_adverts = []
         modified_adverts: List[Advertisement] = []
@@ -144,13 +145,14 @@ def main():
         for a in upserted_adverts:
             print(f'Upserted: {a.title()}')
     finally:
+        print('Finished scraping')
         client.close()
 
 
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', minutes=1)
+@sched.scheduled_job('interval', hours=4)
 def timed_job():
     main()
 
