@@ -1,24 +1,9 @@
-# from apscheduler.schedulers.blocking import BlockingScheduler
-# import pymongo
-# import os
-
-# sched = BlockingScheduler()
-# client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
-
-
-# @sched.scheduled_job('interval', minutes=1)
-# def timed_job():
-#     db = client.test
-#     print(db)
-
-
-# sched.start()
-
 import os
 import requests
 import pymongo
 import hashlib
 
+from apscheduler.schedulers.blocking import BlockingScheduler
 from pymongo.results import UpdateResult
 from pymongo.collection import Collection
 from bs4 import BeautifulSoup
@@ -119,33 +104,55 @@ def try_upsert(collection: Collection, advertisement: Advertisement) -> UpdateRe
     ], upsert=True)
 
 
-client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
-db: Database = client.get_default_database()
-collection = db.get_collection('advertisements')
-URL = 'https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Ato%5D=800000&search%5Bfilter_float_price_per_m%3Ato%5D=12000&search%5Bfilter_float_m%3Afrom%5D=40&search%5Bfilter_float_m%3Ato%5D=70&search%5Bfilter_enum_floor_no%5D%5B0%5D=floor_1&search%5Bfilter_enum_floor_no%5D%5B1%5D=floor_2&search%5Bfilter_enum_floor_no%5D%5B2%5D=floor_3&search%5Bfilter_enum_floor_no%5D%5B3%5D=floor_4&search%5Bfilter_enum_floor_no%5D%5B4%5D=floor_5&search%5Bfilter_enum_floor_no%5D%5B5%5D=floor_6&search%5Bfilter_enum_floor_no%5D%5B6%5D=floor_7&search%5Bfilter_enum_floor_no%5D%5B7%5D=floor_8&search%5Bfilter_enum_floor_no%5D%5B8%5D=floor_9&search%5Bfilter_enum_floor_no%5D%5B9%5D=floor_10&search%5Bfilter_enum_floor_no%5D%5B10%5D=floor_higher_10&search%5Bfilter_enum_floor_no%5D%5B11%5D=garret&search%5Bdescription%5D=1&search%5Bprivate_business%5D=private&search%5Border%5D=created_at_first%3Adesc&locations%5B0%5D%5Bregion_id%5D=7&locations%5B0%5D%5Bsubregion_id%5D=197&locations%5B0%5D%5Bcity_id%5D=26&locations%5B0%5D%5Bdistrict_id%5D=42&locations%5B1%5D%5Bregion_id%5D=7&locations%5B1%5D%5Bsubregion_id%5D=197&locations%5B1%5D%5Bcity_id%5D=26&locations%5B1%5D%5Bdistrict_id%5D=847&locations%5B2%5D%5Bregion_id%5D=7&locations%5B2%5D%5Bsubregion_id%5D=197&locations%5B2%5D%5Bcity_id%5D=26&locations%5B2%5D%5Bdistrict_id%5D=39&locations%5B3%5D%5Bregion_id%5D=7&locations%5B3%5D%5Bsubregion_id%5D=197&locations%5B3%5D%5Bcity_id%5D=26&locations%5B3%5D%5Bdistrict_id%5D=44&locations%5B4%5D%5Bregion_id%5D=7&locations%5B4%5D%5Bsubregion_id%5D=197&locations%5B4%5D%5Bcity_id%5D=26&locations%5B4%5D%5Bdistrict_id%5D=724&locations%5B5%5D%5Bregion_id%5D=7&locations%5B5%5D%5Bsubregion_id%5D=197&locations%5B5%5D%5Bcity_id%5D=26&locations%5B5%5D%5Bdistrict_id%5D=40&locations%5B6%5D%5Bregion_id%5D=7&locations%5B6%5D%5Bsubregion_id%5D=197&locations%5B6%5D%5Bcity_id%5D=26&locations%5B6%5D%5Bdistrict_id%5D=53&locations%5B7%5D%5Bregion_id%5D=7&locations%5B7%5D%5Bcity_id%5D=26&locations%5B7%5D%5Bdistrict_id%5D=3319&locations%5B8%5D%5Bregion_id%5D=7&locations%5B8%5D%5Bcity_id%5D=26&locations%5B8%5D%5Bdistrict_id%5D=38&nrAdsPerPage=72'
+def main():
+    client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
+    db: Database = client.get_default_database()
+    collection = db.get_collection('advertisements')
+    url = 'https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Ato%5D=800000&search%5Bfilter_float_price_per_m%3Ato%5D=12000&search%5Bfilter_float_m%3Afrom%5D=40&search%5Bfilter_float_m%3Ato%5D=70&search%5Bfilter_enum_floor_no%5D%5B0%5D=floor_1&search%5Bfilter_enum_floor_no%5D%5B1%5D=floor_2&search%5Bfilter_enum_floor_no%5D%5B2%5D=floor_3&search%5Bfilter_enum_floor_no%5D%5B3%5D=floor_4&search%5Bfilter_enum_floor_no%5D%5B4%5D=floor_5&search%5Bfilter_enum_floor_no%5D%5B5%5D=floor_6&search%5Bfilter_enum_floor_no%5D%5B6%5D=floor_7&search%5Bfilter_enum_floor_no%5D%5B7%5D=floor_8&search%5Bfilter_enum_floor_no%5D%5B8%5D=floor_9&search%5Bfilter_enum_floor_no%5D%5B9%5D=floor_10&search%5Bfilter_enum_floor_no%5D%5B10%5D=floor_higher_10&search%5Bfilter_enum_floor_no%5D%5B11%5D=garret&search%5Bdescription%5D=1&search%5Bprivate_business%5D=private&search%5Border%5D=created_at_first%3Adesc&locations%5B0%5D%5Bregion_id%5D=7&locations%5B0%5D%5Bsubregion_id%5D=197&locations%5B0%5D%5Bcity_id%5D=26&locations%5B0%5D%5Bdistrict_id%5D=42&locations%5B1%5D%5Bregion_id%5D=7&locations%5B1%5D%5Bsubregion_id%5D=197&locations%5B1%5D%5Bcity_id%5D=26&locations%5B1%5D%5Bdistrict_id%5D=847&locations%5B2%5D%5Bregion_id%5D=7&locations%5B2%5D%5Bsubregion_id%5D=197&locations%5B2%5D%5Bcity_id%5D=26&locations%5B2%5D%5Bdistrict_id%5D=39&locations%5B3%5D%5Bregion_id%5D=7&locations%5B3%5D%5Bsubregion_id%5D=197&locations%5B3%5D%5Bcity_id%5D=26&locations%5B3%5D%5Bdistrict_id%5D=44&locations%5B4%5D%5Bregion_id%5D=7&locations%5B4%5D%5Bsubregion_id%5D=197&locations%5B4%5D%5Bcity_id%5D=26&locations%5B4%5D%5Bdistrict_id%5D=724&locations%5B5%5D%5Bregion_id%5D=7&locations%5B5%5D%5Bsubregion_id%5D=197&locations%5B5%5D%5Bcity_id%5D=26&locations%5B5%5D%5Bdistrict_id%5D=40&locations%5B6%5D%5Bregion_id%5D=7&locations%5B6%5D%5Bsubregion_id%5D=197&locations%5B6%5D%5Bcity_id%5D=26&locations%5B6%5D%5Bdistrict_id%5D=53&locations%5B7%5D%5Bregion_id%5D=7&locations%5B7%5D%5Bcity_id%5D=26&locations%5B7%5D%5Bdistrict_id%5D=3319&locations%5B8%5D%5Bregion_id%5D=7&locations%5B8%5D%5Bcity_id%5D=26&locations%5B8%5D%5Bdistrict_id%5D=38&nrAdsPerPage=72'
 
-try:
-    page = requests.get(URL)
-    soup = BeautifulSoup(page.content, 'html.parser')
-    container = soup.find(id='body-container')
-    articles = container.find_all('article')
-    upserted_adverts = []
-    modified_adverts: List[Advertisement] = []
+    try:
+        upserted_adverts = []
+        modified_adverts: List[Advertisement] = []
+        page = 1
 
-    for article in articles:
-        advertisement = Advertisement(article)
-        result = try_upsert(collection, advertisement)
+        while True:
+            url_page = f'&page={page}' if page > 1 else ''
+            page_content = requests.get(url + url_page, allow_redirects=False)
 
-        if result.modified_count > 0:
-            modified_adverts.append(advertisement)
+            if page_content.status_code > 299:
+                break
 
-        if result.upserted_id != None:
-            upserted_adverts.append(advertisement)
+            soup = BeautifulSoup(page_content.content, 'html.parser')
+            container = soup.find(id='body-container')
+            articles = container.find_all('article')
 
-    for a in modified_adverts:
-        print(f'Modified: {a.title()}')
+            for article in articles[3:]:
+                advertisement = Advertisement(article)
+                result = try_upsert(collection, advertisement)
 
-    for a in upserted_adverts:
-        print(f'Upserted: {a.title()}')
-finally:
-    client.close()
+                if result.modified_count > 0:
+                    modified_adverts.append(advertisement)
+
+                if result.upserted_id != None:
+                    upserted_adverts.append(advertisement)
+
+            page = page + 1
+
+        for a in modified_adverts:
+            print(f'Modified: {a.title()}')
+
+        for a in upserted_adverts:
+            print(f'Upserted: {a.title()}')
+    finally:
+        client.close()
+
+
+sched = BlockingScheduler()
+
+
+@sched.scheduled_job('interval', minutes=1)
+def timed_job():
+    main()
+
+
+sched.start()
