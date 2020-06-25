@@ -1,88 +1,151 @@
-from apscheduler.schedulers.blocking import BlockingScheduler
-import pymongo
-import os
-
-sched = BlockingScheduler()
-client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
-
-
-@sched.scheduled_job('interval', minutes=1)
-def timed_job():
-    db = client.test
-    print(db)
-
-
-sched.start()
-
-# import os
-# import requests
+# from apscheduler.schedulers.blocking import BlockingScheduler
 # import pymongo
-# from bs4 import BeautifulSoup
-# from decimal import Decimal
+# import os
 
-
-# class Advertisement:
-#     def __init__(self, adv):
-#         self.adv = adv
-#         self.adv_details = adv.find('div', class_='offer-item-details')
-
-#     def title(self) -> str:
-#         title = self.adv.find('span', class_='offer-item-title')
-#         return title.text
-
-#     def link(self) -> str:
-#         header = self.adv.find('header', class_='offer-item-header')
-#         link = header.find('a')
-#         return link.attrs['href']
-
-#     def rooms(self) -> int:
-#         li = self.adv_details.find('li', class_='offer-item-rooms')
-#         return int(li.text[0])
-
-#     def price(self) -> float:
-#         li = self.adv_details.find('li', class_='offer-item-price')
-#         return float(list(li.stripped_strings)[0][:-3].replace(' ', '').replace(',', '.'))
-
-#     def price_per_m(self) -> float:
-#         li = self.adv_details.find('li', class_='offer-item-price-per-m')
-#         return float(li.text[:-6].replace(' ', ''))
-
-#     def area(self) -> float:
-#         li = self.adv_details.find('li', class_='offer-item-area')
-#         return float(li.text[:-3].replace(',', '.'))
-
-#     def key(self) -> int:
-#         return hash(self.link())
-
-#     def to_dict(self) -> dict:
-#         return {
-#             'key': self.key(),
-#             'area': self.area(),
-#             'price_per_m': self.price_per_m(),
-#             'price': self.price(),
-#             'rooms': self.rooms(),
-#             'link': self.link(),
-#             'title': self.title(),
-#         }
-
-
+# sched = BlockingScheduler()
 # client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
-# db = client.get_default_database()
-# collection = db.get_collection('advertisements')
 
-# try:
-#     URL = 'https://www.otodom.pl/sprzedaz/mieszkanie/?search[filter_float_price%3Ato]=800000&search[filter_float_price_per_m%3Ato]=12000&search[filter_float_m%3Afrom]=50&search[description]=1&search[private_business]=private&search[order]=created_at_first%3Adesc&locations[0][region_id]=7&locations[0][subregion_id]=197&locations[0][city_id]=26&locations[0][district_id]=42&locations[1][region_id]=7&locations[1][subregion_id]=197&locations[1][city_id]=26&locations[1][district_id]=847&locations[2][region_id]=7&locations[2][subregion_id]=197&locations[2][city_id]=26&locations[2][district_id]=39&locations[3][region_id]=7&locations[3][subregion_id]=197&locations[3][city_id]=26&locations[3][district_id]=44&locations[4][region_id]=7&locations[4][subregion_id]=197&locations[4][city_id]=26&locations[4][district_id]=724&locations[5][region_id]=7&locations[5][subregion_id]=197&locations[5][city_id]=26&locations[5][district_id]=40&locations[6][region_id]=7&locations[6][subregion_id]=197&locations[6][city_id]=26&locations[6][district_id]=53&locations[7][region_id]=7&locations[7][city_id]=26&locations[7][district_id]=3319&locations[8][region_id]=7&locations[8][city_id]=26&locations[8][district_id]=38&nrAdsPerPage=72'
-#     page = requests.get(URL)
-#     soup = BeautifulSoup(page.content, 'html.parser')
-#     container = soup.find(id='body-container')
-#     articles = container.find_all('article')
-#     adverts = []
 
-#     for article in articles:
-#         advertisement = Advertisement(article)
-#         adverts.append(advertisement.to_dict())
+# @sched.scheduled_job('interval', minutes=1)
+# def timed_job():
+#     db = client.test
+#     print(db)
 
-#     result = collection.insert_many(adverts)
-#     print(result)
-# finally:
-#     client.close()
+
+# sched.start()
+
+import os
+import requests
+import pymongo
+import hashlib
+
+from pymongo.results import UpdateResult
+from pymongo.collection import Collection
+from bs4 import BeautifulSoup
+from decimal import Decimal
+from pymongo.database import Database
+from typing import List
+
+
+class Advertisement:
+    def __init__(self, adv):
+        self.adv = adv
+        self.adv_details = adv.find('div', class_='offer-item-details')
+
+    def title(self) -> str:
+        title = self.adv.find('span', class_='offer-item-title')
+        return title.text
+
+    def link(self) -> str:
+        header = self.adv.find('header', class_='offer-item-header')
+        link = header.find('a')
+        return link.attrs['href']
+
+    def rooms(self) -> int:
+        li = self.adv_details.find('li', class_='offer-item-rooms')
+        return int(li.text[0])
+
+    def price(self) -> float:
+        li = self.adv_details.find('li', class_='offer-item-price')
+        return float(list(li.stripped_strings)[0][:-3].replace(' ', '').replace(',', '.'))
+
+    def price_per_m(self) -> float:
+        li = self.adv_details.find('li', class_='offer-item-price-per-m')
+        return float(li.text[:-6].replace(' ', ''))
+
+    def area(self) -> float:
+        li = self.adv_details.find('li', class_='offer-item-area')
+        return float(li.text[:-3].replace(',', '.'))
+
+    def key(self) -> int:
+        return int(hashlib.sha256(self.link().encode('utf-8')).hexdigest(), 16) % 10**8
+
+    def to_dict(self) -> dict:
+        return {
+            'key': self.key(),
+            'area': self.area(),
+            'price_per_m': self.price_per_m(),
+            'price': self.price(),
+            'rooms': self.rooms(),
+            'link': self.link(),
+            'title': self.title(),
+        }
+
+
+def try_upsert(collection: Collection, advertisement: Advertisement) -> UpdateResult:
+    return collection.update_one({'_id': advertisement.key()}, [
+        {
+            "$replaceRoot": {
+                "newRoot": {
+                    "$mergeObjects": [
+                        "$$ROOT", {
+                            "price_historical": {
+                                "$ifNull": [
+                                    {
+                                        "$concatArrays": [
+                                            "$$ROOT.price_historical",
+                                                {
+                                                    "$cond": {"if": {"$eq": ["$$ROOT.price", advertisement.price()]}, "then": [], "else": [
+                                                        {
+                                                            "price": advertisement.price(),
+                                                            "updated_at": "$$NOW"
+                                                        }
+                                                    ]}
+                                                }
+                                        ]
+                                    },
+                                    [
+                                        {
+                                            "price": advertisement.price(),
+                                            "updated_at": "$$NOW"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "title": advertisement.title(),
+                            "link": advertisement.link(),
+                            "rooms": advertisement.rooms(),
+                            "area": advertisement.area()
+                        }
+                    ]
+                }
+            }
+        }, {
+            "$set": {
+                "price_per_m": advertisement.price_per_m(),
+                "price": advertisement.price()
+            }
+        }
+    ], upsert=True)
+
+
+client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
+db: Database = client.get_default_database()
+collection = db.get_collection('advertisements')
+URL = 'https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Ato%5D=800000&search%5Bfilter_float_price_per_m%3Ato%5D=12000&search%5Bfilter_float_m%3Afrom%5D=40&search%5Bfilter_float_m%3Ato%5D=70&search%5Bfilter_enum_floor_no%5D%5B0%5D=floor_1&search%5Bfilter_enum_floor_no%5D%5B1%5D=floor_2&search%5Bfilter_enum_floor_no%5D%5B2%5D=floor_3&search%5Bfilter_enum_floor_no%5D%5B3%5D=floor_4&search%5Bfilter_enum_floor_no%5D%5B4%5D=floor_5&search%5Bfilter_enum_floor_no%5D%5B5%5D=floor_6&search%5Bfilter_enum_floor_no%5D%5B6%5D=floor_7&search%5Bfilter_enum_floor_no%5D%5B7%5D=floor_8&search%5Bfilter_enum_floor_no%5D%5B8%5D=floor_9&search%5Bfilter_enum_floor_no%5D%5B9%5D=floor_10&search%5Bfilter_enum_floor_no%5D%5B10%5D=floor_higher_10&search%5Bfilter_enum_floor_no%5D%5B11%5D=garret&search%5Bdescription%5D=1&search%5Bprivate_business%5D=private&search%5Border%5D=created_at_first%3Adesc&locations%5B0%5D%5Bregion_id%5D=7&locations%5B0%5D%5Bsubregion_id%5D=197&locations%5B0%5D%5Bcity_id%5D=26&locations%5B0%5D%5Bdistrict_id%5D=42&locations%5B1%5D%5Bregion_id%5D=7&locations%5B1%5D%5Bsubregion_id%5D=197&locations%5B1%5D%5Bcity_id%5D=26&locations%5B1%5D%5Bdistrict_id%5D=847&locations%5B2%5D%5Bregion_id%5D=7&locations%5B2%5D%5Bsubregion_id%5D=197&locations%5B2%5D%5Bcity_id%5D=26&locations%5B2%5D%5Bdistrict_id%5D=39&locations%5B3%5D%5Bregion_id%5D=7&locations%5B3%5D%5Bsubregion_id%5D=197&locations%5B3%5D%5Bcity_id%5D=26&locations%5B3%5D%5Bdistrict_id%5D=44&locations%5B4%5D%5Bregion_id%5D=7&locations%5B4%5D%5Bsubregion_id%5D=197&locations%5B4%5D%5Bcity_id%5D=26&locations%5B4%5D%5Bdistrict_id%5D=724&locations%5B5%5D%5Bregion_id%5D=7&locations%5B5%5D%5Bsubregion_id%5D=197&locations%5B5%5D%5Bcity_id%5D=26&locations%5B5%5D%5Bdistrict_id%5D=40&locations%5B6%5D%5Bregion_id%5D=7&locations%5B6%5D%5Bsubregion_id%5D=197&locations%5B6%5D%5Bcity_id%5D=26&locations%5B6%5D%5Bdistrict_id%5D=53&locations%5B7%5D%5Bregion_id%5D=7&locations%5B7%5D%5Bcity_id%5D=26&locations%5B7%5D%5Bdistrict_id%5D=3319&locations%5B8%5D%5Bregion_id%5D=7&locations%5B8%5D%5Bcity_id%5D=26&locations%5B8%5D%5Bdistrict_id%5D=38&nrAdsPerPage=72'
+
+try:
+    page = requests.get(URL)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    container = soup.find(id='body-container')
+    articles = container.find_all('article')
+    upserted_adverts = []
+    modified_adverts: List[Advertisement] = []
+
+    for article in articles:
+        advertisement = Advertisement(article)
+        result = try_upsert(collection, advertisement)
+
+        if result.modified_count > 0:
+            modified_adverts.append(advertisement)
+
+        if result.upserted_id != None:
+            upserted_adverts.append(advertisement)
+
+    for a in modified_adverts:
+        print(f'Modified: {a.title()}')
+
+    for a in upserted_adverts:
+        print(f'Upserted: {a.title()}')
+finally:
+    client.close()
