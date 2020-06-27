@@ -152,10 +152,11 @@ def main():
         client.close()
 
 
+minutes = int(os.environ['MINUTES'])
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', minutes=3)
+@sched.scheduled_job('interval', minutes=minutes)
 def timed_job():
     main()
 
