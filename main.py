@@ -90,7 +90,10 @@ def try_upsert(collection: Collection, advertisement: Advertisement) -> UpdateRe
                             "title": advertisement.title(),
                             "link": advertisement.link(),
                             "rooms": advertisement.rooms(),
-                            "area": advertisement.area()
+                            "area": advertisement.area(),
+                            "added_at": {
+                                "$ifNull": ["$$ROOT.added_at", "$$NOW"]
+                            }
                         }
                     ]
                 }
@@ -152,7 +155,7 @@ def main():
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', hours=4)
+@sched.scheduled_job('interval', minutes=3)
 def timed_job():
     main()
 
