@@ -2,13 +2,12 @@ import os
 import requests
 import pymongo
 import hashlib
+import smtplib
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from pymongo.results import UpdateResult
 from pymongo.collection import Collection
 from bs4 import BeautifulSoup
-from decimal import Decimal
-from pymongo.database import Database
 from typing import List
 from datetime import datetime
 
@@ -118,6 +117,43 @@ def try_mark_outdated(scraped_ids: list, collection: Collection) -> List[dict]:
     return to_be_updated
 
 
+def generate_html(upserted_adverts: List[Advertisement]) -> str:
+    from jinja2 import Environment, FileSystemLoader
+
+    env = Environment(loader=FileSystemLoader('./static/'))
+    template = env.get_template("template.html")
+    template_vars = {
+        "upserted_adverts": upserted_adverts,
+    }
+    html_out = template.render(template_vars)
+
+    return html_out
+
+
+def send_mail(upserted_adverts: List[Advertisement], modified_adverts: List[Advertisement], to_be_updated: List[dict]):
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    if len(upserted_adverts) + len(modified_adverts) + len(to_be_updated) == 0:
+        return
+
+    sender = "pyscraper <py@scraper.com>"
+    receiver = os.environ['SMTP_RECEIVER']
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Scraping results"
+    message["From"] = sender
+    message["To"] = receiver
+
+    html = generate_html(upserted_adverts)
+
+    message.attach(MIMEText(html, 'html'))
+
+    with smtplib.SMTP(os.environ['SMTP_HOST'], os.environ['SMTP_PORT']) as server:
+        server.login(os.environ['SMTP_LOGIN'], os.environ['SMTP_PASSWORD'])
+        server.sendmail(sender, receiver, message.as_string())
+
+
 def main():
     client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
     db = client.get_default_database()
@@ -130,7 +166,7 @@ def main():
     print('Started scraping')
 
     try:
-        upserted_adverts = []
+        upserted_adverts: List[Advertisement] = []
         modified_adverts: List[Advertisement] = []
         scraped_ids = []
 
@@ -163,6 +199,8 @@ def main():
                 page = page + 1
 
         outdated_adverts = try_mark_outdated(scraped_ids, collection)
+
+        # send_mail(upserted_adverts, modified_adverts, outdated_adverts)
 
         for a in modified_adverts:
             print(f'Modified: {a.title()}')
