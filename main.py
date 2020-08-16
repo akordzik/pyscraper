@@ -44,7 +44,13 @@ class Advertisement:
         return float(li.text[:-3].replace(',', '.'))
 
     def key(self) -> int:
-        return int(hashlib.sha256(self.link().encode('utf-8')).hexdigest(), 16) % 10**8
+        return int(hashlib.sha256(Advertisement._extract_key(self.link()).encode('utf-8')).hexdigest(), 16) % 10**8
+
+    @staticmethod
+    def _extract_key(link: str) -> str:
+        last_dash = link.rindex('-')
+        last_dot = link.rindex('.')
+        return link[last_dash + 1:last_dot]
 
 
 def try_upsert(collection: Collection, advertisement: Advertisement) -> UpdateResult:
