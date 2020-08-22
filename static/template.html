@@ -1,9 +1,22 @@
 <html>
 
 <body>
+    <p>New ads:</p>
     <ul>
         {% for a in upserted_adverts %}
-        <li>{{a.title()}}</li>
+        <li>{{a.title()}} {{a.price_per_m()}} {{a.link()}}</li>
+        {% endfor %}
+    </ul>
+    <p>Modified ads:</p>
+    <ul>
+        {% for a in modified_adverts %}
+        <li>{{a.title()}} {{a.price_per_m()}} {{a.link()}}</li>
+        {% endfor %}
+    </ul>
+    <p>Outdated ads:</p>
+    <ul>
+        {% for a in outdated_adverts %}
+        <li>{{a['title']}}</li>
         {% endfor %}
     </ul>
 </body>
