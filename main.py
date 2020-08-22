@@ -6,11 +6,12 @@ import smtplib
 import json
 
 from apscheduler.schedulers.blocking import BlockingScheduler
+from pymongo.mongo_client import MongoClient
 from pymongo.results import UpdateResult
 from pymongo.collection import Collection
-from bs4 import BeautifulSoup
-from typing import List
+from typing import List, Tuple
 from datetime import datetime
+from requests.models import Response
 
 
 class Advertisement:
@@ -56,6 +57,14 @@ class Advertisement:
 with open('config.json', 'r') as config:
     configuration = json.loads(config.read())
     urls: List[str] = configuration['urls']
+
+
+def get_collection(mongo_uri: str) -> Tuple[Collection, MongoClient]:
+    client = pymongo.MongoClient(mongo_uri)
+    db = client.get_default_database()
+    collection = db.get_collection('advertisements')
+
+    return collection, client
 
 
 def try_upsert(collection: Collection, advertisement: Advertisement) -> UpdateResult:
@@ -164,14 +173,22 @@ def send_mail(upserted_adverts: List[Advertisement], modified_adverts: List[Adve
         server.sendmail(sender, receiver, message.as_string())
 
 
-def main():
-    client = pymongo.MongoClient(os.environ['MONGOLAB_URI'])
-    db = client.get_default_database()
-    collection = db.get_collection('advertisements')
+def extract_adverts(page_content: Response) -> List[Advertisement]:
+    from bs4 import BeautifulSoup
 
+    soup = BeautifulSoup(page_content.content, 'html.parser')
+    container = soup.find(id='body-container')
+    articles = container.find_all('article')
+    adverts = list(map(lambda x: Advertisement(x), articles[3:]))
+
+    return adverts
+
+
+def main():
     print('Started scraping')
 
     try:
+        collection, client = get_collection(os.environ['MONGOLAB_URI'])
         upserted_adverts: List[Advertisement] = []
         modified_adverts: List[Advertisement] = []
         scraped_ids = []
@@ -187,10 +204,7 @@ def main():
                 if page_content.status_code > 299:
                     break
 
-                soup = BeautifulSoup(page_content.content, 'html.parser')
-                container = soup.find(id='body-container')
-                articles = container.find_all('article')
-                adverts = list(map(lambda x: Advertisement(x), articles[3:]))
+                adverts = extract_adverts(page_content)
 
                 for advertisement in adverts:
                     result = try_upsert(collection, advertisement)
