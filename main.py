@@ -220,7 +220,7 @@ def main():
 
         outdated_adverts = try_mark_outdated(scraped_ids, collection)
 
-        # send_mail(upserted_adverts, modified_adverts, outdated_adverts)
+        send_mail(upserted_adverts, modified_adverts, outdated_adverts)
 
         for a in modified_adverts:
             print(f'Modified: {a.title()}')
