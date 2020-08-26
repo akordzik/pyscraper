@@ -201,8 +201,10 @@ def main():
                 page_content = requests.get(
                     url + url_page, allow_redirects=False)
 
-                if page_content.status_code > 299:
+                if page_content.status_code >= 300 and page_content.status_code < 400:
                     break
+                if page_content.status_code >= 400:
+                    raise Exception(f'Unsuccessful response: {page_content.status_code}')
 
                 adverts = extract_adverts(page_content)
 
@@ -220,7 +222,7 @@ def main():
 
         outdated_adverts = try_mark_outdated(scraped_ids, collection)
 
-        send_mail(upserted_adverts, modified_adverts, outdated_adverts)
+        # send_mail(upserted_adverts, modified_adverts, outdated_adverts)
 
         for a in modified_adverts:
             print(f'Modified: {a.title()}')
@@ -230,6 +232,8 @@ def main():
 
         for a in outdated_adverts:
             print(f'Outdated: {a["title"]}')
+    except Exception as e:
+        print(f'Exception was thrown: {e}')
     finally:
         print('Finished scraping')
         client.close()
@@ -242,6 +246,5 @@ sched = BlockingScheduler()
 @sched.scheduled_job('interval', minutes=minutes)
 def timed_job():
     main()
-
 
 sched.start()
